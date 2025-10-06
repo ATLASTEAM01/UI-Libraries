@@ -129,7 +129,7 @@ function utility.drag(obj)
     local start, objPosition, dragging
 
     obj.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then -- 适配移动端触摸
             dragging = true
             start = input.Position
             objPosition = obj.Position
@@ -137,13 +137,13 @@ function utility.drag(obj)
     end)
 
     obj.InputEnded:Connect(function(input )
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then 
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then -- 适配移动端触摸
             dragging = false
         end
     end)
 
     inputService.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then   
+        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then -- 适配移动端触摸
             utility.tween(obj, {library.dragSpeed}, {Position = UDim2.new(objPosition.X.Scale, objPosition.X.Offset + (input.Position - start).X, objPosition.Y.Scale, objPosition.Y.Offset + (input.Position - start).Y)})
         end
     end)
@@ -206,8 +206,14 @@ end)
 function library:Load(opts)
     local options = utility.format_table(opts)
     local name = options.name
-    local sizeX = options.sizeX or 440
-    local sizeY = options.sizeY or 480
+	
+    -- 【新增】检测是否为移动设备
+    local isMobile = inputService.TouchEnabled and not inputService.MouseEnabled
+
+    -- 【修改】根据设备类型调整UI尺寸
+    local sizeX = options.sizeX or (isMobile and 340 or 440)
+    local sizeY = options.sizeY or (isMobile and 380 or 480)
+	
     local theme = themes[options.theme] or themes.Dark
     local colorOverrides = options.colorOverrides or {}
 
@@ -216,14 +222,53 @@ function library:Load(opts)
             theme[i] = v
         end
     end
+	
+    -- 【新增】创建可拖拽的展开/收起切换按钮
+    local toggleButton = utility.create("TextButton", {
+        Size = UDim2.new(0, 80, 0, 30),
+        Position = UDim2.new(0, 10, 0, 10), -- 初始位置在左上角
+        BackgroundColor3 = theme.MainFrame,
+        TextColor3 = theme.TextColor,
+        Font = Enum.Font.Gotham,
+        Text = "收起",
+        TextSize = 14,
+        ZIndex = 100, -- 确保在最顶层
+        Parent = venuslib
+    })
+    utility.create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = toggleButton })
+    utility.drag(toggleButton) -- 让这个按钮也可以拖拽
 
     local holder = utility.create("Frame", {
-        Size = UDim2.new(0, sizeX, 0, 26),
+        Size = UDim2.new(0, sizeX, 0, sizeY), -- 【修改】使用动态的sizeY
         BackgroundTransparency = 1,
         Position = utility.get_center(sizeX, sizeY),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        Parent = venuslib
+        Parent = venuslib,
+        ClipsDescendants = true -- 【新增】裁剪子元素，用于动画
     })
+	
+    -- 【新增】切换按钮的点击事件
+    local isUiVisible = true
+    toggleButton.MouseButton1Click:Connect(function()
+        isUiVisible = not isUiVisible
+        
+        if isUiVisible then
+            toggleButton.Text = "收起"
+            holder.Visible = true
+            -- 播放展开动画
+            utility.tween(holder, {0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out}, {Size = UDim2.new(0, sizeX, 0, sizeY)})
+        else
+            toggleButton.Text = "展开"
+            -- 播放收起动画
+            utility.tween(holder, {0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out}, {Size = UDim2.new(0, sizeX, 0, 26)}, function()
+                -- 动画结束后隐藏，以优化性能
+                if not isUiVisible then
+                    holder.Visible = false
+                end
+            end)
+        end
+    end)
+
 
     utility.create("TextLabel", {
         Size = UDim2.new(0, 1, 1, 0),
@@ -300,8 +345,10 @@ function library:Load(opts)
         Padding = UDim.new(0, 4),
         Parent = tabToggles
     })
-
-    local windowTypes = {count = 0}
+	
+	-- ... 后续所有代码保持不变 ...
+    
+	local windowTypes = {count = 0}
     windowTypes = utility.format_table(windowTypes)
 
     function windowTypes:Tab(name)
