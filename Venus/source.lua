@@ -79,35 +79,28 @@ end
 
 function utility.create(class, properties)
     local obj = Instance.new(class)
-
     local forcedProperties = {
         BorderSizePixel = 0,
         AutoButtonColor = false
     }
-
     obj.Name = ""
-
     for i = 1, 16 do
         obj.Name = obj.Name .. string.char(math.random(48, 122))
     end
-
     for prop, v in next, properties do
         obj[prop] = v
     end
-
     for prop, v in next, forcedProperties do
         pcall(function()
             obj[prop] = v
         end)
     end
-    
     return obj
 end
 
 function utility.tween(obj, info, properties, callback)
     local anim = tweenService:Create(obj, TweenInfo.new(unpack(info)), properties)
     anim:Play()
-
     if callback then
         anim.Completed:Connect(callback)
     end
@@ -116,35 +109,30 @@ end
 function utility.ripple(obj)
     local ripple = Instance.new("Frame")
     Instance.new("UICorner", ripple).CornerRadius = UDim.new(0, 256)
-    
     ripple.ZIndex = obj.ZIndex + 1
     ripple.Parent = obj
     ripple.Position = UDim2.new(0.5, 0, 0.5, 0)
     ripple.BackgroundTransparency = 0.4
-
     utility.tween(ripple, {0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out}, {BackgroundTransparency = 1, Size = UDim2.new(0, obj.AbsoluteSize.X, 0, obj.AbsoluteSize.X), Position = UDim2.new(0.5, -obj.AbsoluteSize.X / 2, 0.5, -obj.AbsoluteSize.X / 2)}, function() ripple:Destroy() end)
 end
 
 function utility.drag(obj)
     local start, objPosition, dragging
-
     obj.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             start = input.Position
-            objPosition = obj.Position
+            objPosition = obj.Parent.Position
         end
     end)
-
     obj.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
             dragging = false
         end
     end)
-
     inputService.InputChanged:Connect(function(input)
         if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then   
-            utility.tween(obj, {library.dragSpeed}, {Position = UDim2.new(objPosition.X.Scale, objPosition.X.Offset + (input.Position - start).X, objPosition.Y.Scale, objPosition.Y.Offset + (input.Position - start).Y)})
+            utility.tween(obj.Parent, {library.dragSpeed}, {Position = UDim2.new(objPosition.X.Scale, objPosition.X.Offset + (input.Position - start).X, objPosition.Y.Scale, objPosition.Y.Offset + (input.Position - start).Y)})
         end
     end)
 end
@@ -166,11 +154,9 @@ function utility.format_table(tbl)
         local oldtbl = tbl
         local newtbl = {}
         local formattedtbl = {}
-
         for option, v in next, oldtbl do
             newtbl[option:lower()] = v
         end
-
         setmetatable(formattedtbl, {
             __newindex = function(t, k, v)
                 rawset(newtbl, k:lower(), v)
@@ -179,7 +165,6 @@ function utility.format_table(tbl)
                 return newtbl[k:lower()]
             end
         })
-
         return formattedtbl
     else
         return {}
@@ -187,13 +172,10 @@ function utility.format_table(tbl)
 end
 
 local venuslib = utility.create("ScreenGui", {})
-
 if syn and syn.protect_gui then
     syn.protect_gui(venuslib)
 end
-
 venuslib.Parent = coreGui
-
 library = utility.format_table(library)
 
 inputService.InputBegan:Connect(function(input)
@@ -206,12 +188,9 @@ end)
 function library:Load(opts)
     local options = utility.format_table(opts)
     local name = options.name
-
     local isMobile = inputService.TouchEnabled and not inputService.MouseEnabled
-
     local sizeX = options.sizeX or (isMobile and 340 or 440)
     local sizeY = options.sizeY or (isMobile and 380 or 480)
-
     local theme = themes[options.theme] or themes.Dark
     local colorOverrides = options.colorOverrides or {}
 
@@ -235,38 +214,29 @@ function library:Load(opts)
     utility.create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = toggleButton })
     utility.drag(toggleButton)
 
-    local holder = utility.create("Frame", {
+    local windowFrame = utility.create("Frame", {
         Size = UDim2.new(0, sizeX, 0, sizeY),
-        BackgroundTransparency = 1,
         Position = utility.get_center(sizeX, sizeY),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundColor3 = theme.MainFrame,
         Parent = venuslib,
-        ClipsDescendants = true
     })
     
-    local isUiVisible = true
-    toggleButton.MouseButton1Click:Connect(function()
-        isUiVisible = not isUiVisible
-        
-        if isUiVisible then
-            toggleButton.Text = "收起"
-            holder.Visible = true
-            utility.tween(holder, {0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out}, {Size = UDim2.new(0, sizeX, 0, sizeY)})
-        else
-            toggleButton.Text = "展开"
-            utility.tween(holder, {0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out}, {Size = UDim2.new(0, sizeX, 0, 26)}, function()
-                if not isUiVisible then
-                    holder.Visible = false
-                end
-            end)
-        end
-    end)
+    utility.create("UICorner", {
+        CornerRadius = UDim.new(0, 12),
+        Parent = windowFrame
+    })
 
+    local titleBar = utility.create("Frame", {
+        Size = UDim2.new(1, 0, 0, 26),
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 0, 0, 0),
+        Parent = windowFrame
+    })
+    
     utility.create("TextLabel", {
-        Size = UDim2.new(0, 1, 1, 0),
+        Size = UDim2.new(1, -16, 1, 0),
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 8, 0, 0),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         FontSize = Enum.FontSize.Size14,
         TextSize = 14,
         TextColor3 = theme.TextColor,
@@ -274,30 +244,41 @@ function library:Load(opts)
         Font = Enum.Font.Gotham,
         TextXAlignment = Enum.TextXAlignment.Left,
         ZIndex = 2,
-        Parent = holder
+        Parent = titleBar
+    })
+    
+    utility.drag(titleBar)
+
+    local contentFrame = utility.create("Frame", {
+        Size = UDim2.new(1, 0, 1, -26),
+        Position = UDim2.new(0, 0, 0, 26),
+        BackgroundTransparency = 1,
+        ClipsDescendants = true,
+        Parent = windowFrame,
     })
 
-    utility.drag(holder)
-
-    local main = utility.create("Frame", {
-        Size = UDim2.new(1, 0, 0, sizeY),
-        BackgroundColor3 = theme.MainFrame,
-        Parent = holder
-    })
-
-    utility.create("UICorner", {
-        CornerRadius = UDim.new(0, 12),
-        Parent = main
-    })
-
+    local isUiVisible = true
+    toggleButton.MouseButton1Click:Connect(function()
+        isUiVisible = not isUiVisible
+        toggleButton.Text = isUiVisible and "收起" or "展开"
+        if isUiVisible then
+            contentFrame.Visible = true
+        end
+        local targetSize = isUiVisible and UDim2.new(1, 0, 1, -26) or UDim2.new(1, 0, 0, 0)
+        utility.tween(contentFrame, {0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out}, {Size = targetSize}, function()
+            if not isUiVisible then
+                contentFrame.Visible = false
+            end
+        end)
+    end)
+    
     local tabs = utility.create("Frame", {
         ZIndex = 2,
-        Size = UDim2.new(1, -16, 1, -34),
-        Position = UDim2.new(0, 8, 0, 26),
+        Size = UDim2.new(1, -16, 1, -8),
+        Position = UDim2.new(0, 8, 0, 0),
         BackgroundColor3 = theme.TabBackground,
-        Parent = main
+        Parent = contentFrame
     })
-
     
     utility.create("UICorner", {
         CornerRadius = UDim.new(0, 12),
