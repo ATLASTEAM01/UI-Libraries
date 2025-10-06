@@ -122,7 +122,7 @@ function utility.drag(obj)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             start = input.Position
-            objPosition = obj.Parent.Position
+            objPosition = obj.Position
         end
     end)
     obj.InputEnded:Connect(function(input)
@@ -132,7 +132,7 @@ function utility.drag(obj)
     end)
     inputService.InputChanged:Connect(function(input)
         if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then   
-            utility.tween(obj.Parent, {library.dragSpeed}, {Position = UDim2.new(objPosition.X.Scale, objPosition.X.Offset + (input.Position - start).X, objPosition.Y.Scale, objPosition.Y.Offset + (input.Position - start).Y)})
+            utility.tween(obj, {library.dragSpeed}, {Position = UDim2.new(objPosition.X.Scale, objPosition.X.Offset + (input.Position - start).X, objPosition.Y.Scale, objPosition.Y.Offset + (input.Position - start).Y)})
         end
     end)
 end
@@ -218,6 +218,7 @@ function library:Load(opts)
         Size = UDim2.new(0, sizeX, 0, sizeY),
         Position = utility.get_center(sizeX, sizeY),
         BackgroundColor3 = theme.MainFrame,
+        ClipsDescendants = true,
         Parent = venuslib,
     })
     
@@ -225,16 +226,11 @@ function library:Load(opts)
         CornerRadius = UDim.new(0, 12),
         Parent = windowFrame
     })
-
-    local titleBar = utility.create("Frame", {
-        Size = UDim2.new(1, 0, 0, 26),
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0, 0, 0, 0),
-        Parent = windowFrame
-    })
+    
+    utility.drag(windowFrame)
     
     utility.create("TextLabel", {
-        Size = UDim2.new(1, -16, 1, 0),
+        Size = UDim2.new(1, -16, 0, 26),
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 8, 0, 0),
         FontSize = Enum.FontSize.Size14,
@@ -244,16 +240,13 @@ function library:Load(opts)
         Font = Enum.Font.Gotham,
         TextXAlignment = Enum.TextXAlignment.Left,
         ZIndex = 2,
-        Parent = titleBar
+        Parent = windowFrame
     })
     
-    utility.drag(titleBar)
-
     local contentFrame = utility.create("Frame", {
         Size = UDim2.new(1, 0, 1, -26),
         Position = UDim2.new(0, 0, 0, 26),
         BackgroundTransparency = 1,
-        ClipsDescendants = true,
         Parent = windowFrame,
     })
 
@@ -261,11 +254,14 @@ function library:Load(opts)
     toggleButton.MouseButton1Click:Connect(function()
         isUiVisible = not isUiVisible
         toggleButton.Text = isUiVisible and "收起" or "展开"
+
+        local targetSize = isUiVisible and UDim2.new(0, sizeX, 0, sizeY) or UDim2.new(0, sizeX, 0, 26)
+        
         if isUiVisible then
             contentFrame.Visible = true
         end
-        local targetSize = isUiVisible and UDim2.new(1, 0, 1, -26) or UDim2.new(1, 0, 0, 0)
-        utility.tween(contentFrame, {0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out}, {Size = targetSize}, function()
+
+        utility.tween(windowFrame, {0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out}, {Size = targetSize}, function()
             if not isUiVisible then
                 contentFrame.Visible = false
             end
