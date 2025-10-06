@@ -129,21 +129,21 @@ function utility.drag(obj)
     local start, objPosition, dragging
 
     obj.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then -- 适配移动端触摸
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             start = input.Position
             objPosition = obj.Position
         end
     end)
 
-    obj.InputEnded:Connect(function(input )
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then -- 适配移动端触摸
+    obj.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
             dragging = false
         end
     end)
 
     inputService.InputChanged:Connect(function(input)
-        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then -- 适配移动端触摸
+        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then   
             utility.tween(obj, {library.dragSpeed}, {Position = UDim2.new(objPosition.X.Scale, objPosition.X.Offset + (input.Position - start).X, objPosition.Y.Scale, objPosition.Y.Offset + (input.Position - start).Y)})
         end
     end)
@@ -206,14 +206,12 @@ end)
 function library:Load(opts)
     local options = utility.format_table(opts)
     local name = options.name
-	
-    -- 【新增】检测是否为移动设备
+
     local isMobile = inputService.TouchEnabled and not inputService.MouseEnabled
 
-    -- 【修改】根据设备类型调整UI尺寸
     local sizeX = options.sizeX or (isMobile and 340 or 440)
     local sizeY = options.sizeY or (isMobile and 380 or 480)
-	
+
     local theme = themes[options.theme] or themes.Dark
     local colorOverrides = options.colorOverrides or {}
 
@@ -222,32 +220,30 @@ function library:Load(opts)
             theme[i] = v
         end
     end
-	
-    -- 【新增】创建可拖拽的展开/收起切换按钮
+
     local toggleButton = utility.create("TextButton", {
         Size = UDim2.new(0, 80, 0, 30),
-        Position = UDim2.new(0, 10, 0, 10), -- 初始位置在左上角
+        Position = UDim2.new(0, 10, 0, 10),
         BackgroundColor3 = theme.MainFrame,
         TextColor3 = theme.TextColor,
         Font = Enum.Font.Gotham,
         Text = "收起",
         TextSize = 14,
-        ZIndex = 100, -- 确保在最顶层
+        ZIndex = 100,
         Parent = venuslib
     })
     utility.create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = toggleButton })
-    utility.drag(toggleButton) -- 让这个按钮也可以拖拽
+    utility.drag(toggleButton)
 
     local holder = utility.create("Frame", {
-        Size = UDim2.new(0, sizeX, 0, sizeY), -- 【修改】使用动态的sizeY
+        Size = UDim2.new(0, sizeX, 0, sizeY),
         BackgroundTransparency = 1,
         Position = utility.get_center(sizeX, sizeY),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         Parent = venuslib,
-        ClipsDescendants = true -- 【新增】裁剪子元素，用于动画
+        ClipsDescendants = true
     })
-	
-    -- 【新增】切换按钮的点击事件
+    
     local isUiVisible = true
     toggleButton.MouseButton1Click:Connect(function()
         isUiVisible = not isUiVisible
@@ -255,20 +251,16 @@ function library:Load(opts)
         if isUiVisible then
             toggleButton.Text = "收起"
             holder.Visible = true
-            -- 播放展开动画
             utility.tween(holder, {0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out}, {Size = UDim2.new(0, sizeX, 0, sizeY)})
         else
             toggleButton.Text = "展开"
-            -- 播放收起动画
             utility.tween(holder, {0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out}, {Size = UDim2.new(0, sizeX, 0, 26)}, function()
-                -- 动画结束后隐藏，以优化性能
                 if not isUiVisible then
                     holder.Visible = false
                 end
             end)
         end
     end)
-
 
     utility.create("TextLabel", {
         Size = UDim2.new(0, 1, 1, 0),
@@ -345,10 +337,8 @@ function library:Load(opts)
         Padding = UDim.new(0, 4),
         Parent = tabToggles
     })
-	
-	-- ... 后续所有代码保持不变 ...
-    
-	local windowTypes = {count = 0}
+
+    local windowTypes = {count = 0}
     windowTypes = utility.format_table(windowTypes)
 
     function windowTypes:Tab(name)
@@ -851,10 +841,10 @@ function library:Load(opts)
 
                 local function slide(input)
                     local sizeX = math.clamp((input.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X, 0, 1)
-                    utility.tween(fill, {0.3}, {Size = UDim2.new(sizeX, 0, 1, 0)})
+                    utility.tween(fill, {0.1}, {Size = UDim2.new(sizeX, 0, 1, 0)})
 
-                    local value = math.floor((((max - min) * sizeX) + min) * (decimals * 10)) / (decimals * 10)
-                    title.Text = name .. ": " .. value .. valueType
+                    local value = math.floor((((max - min) * sizeX) + min) / decimals) * decimals
+                    title.Text = name .. ": " .. string.format("%." .. (string.find(tostring(decimals), "%.") and (string.len(tostring(decimals)) - 2) or 0) .. "f", value) .. valueType
 
                     if flag then 
                         library.flags[flag] = value
@@ -864,7 +854,7 @@ function library:Load(opts)
                 end
 
                 slider.InputBegan:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         sliding = true
                         utility.tween(fill, {0.2}, {BackgroundColor3 = theme.SliderFillSliding})
                         slide(input)
@@ -872,7 +862,7 @@ function library:Load(opts)
                 end)
 
                 slider.InputEnded:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         utility.tween(fill, {0.2}, {BackgroundColor3 = theme.SliderFill})
                         sliding = false
                         if not mouseOver then
@@ -894,7 +884,7 @@ function library:Load(opts)
                 end)
 
                 inputService.InputChanged:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseMovement then
+                    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
                         if sliding then
                             slide(input)
                         end
@@ -905,11 +895,11 @@ function library:Load(opts)
                 sliderTypes = utility.format_table(sliderTypes)
 
                 function sliderTypes:Set(value)
-                    value = math.floor(value * (decimals * 10)) / (decimals * 10)
+                    value = math.floor(value / decimals) * decimals
                     value = math.clamp(value, min, max)
 
                     fill.Size = UDim2.new((value - min) / (max - min), 0, 1, 0)
-                    title.Text = name .. ": " .. value .. valueType
+                    title.Text = name .. ": " .. string.format("%." .. (string.find(tostring(decimals), "%.") and (string.len(tostring(decimals)) - 2) or 0) .. "f", value) .. valueType
                 end
 
                 function sliderTypes:Hide()
